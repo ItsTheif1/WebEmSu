@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webemsu Frontend - Modified</title>
+    <!-- EmulatorJS Loader script linked up properly -->
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --tile-bg: #1a1a1a;
+            --tile-border: #333;
+            --blue-border: #2b5c8f;
+            --yellow-border: #d4a33e;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Top Bar styling */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-edit {
+            background: #2a2a2a;
+            color: #ccc;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Grid Layout */
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 900px;
+        }
+
+        /* Base Tile Styling */
+        .tile {
+            width: 100px;
+            height: 100px;
+            background-color: var(--tile-bg);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+            overflow: hidden;
+        }
+
+        .tile:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Wide Tiles */
+        .tile-wide {
+            width: 220px;
+            height: 100px;
+            flex-direction: row;
+            justify-content: flex-start;
+            padding-left: 20px;
+            gap: 15px;
+        }
+
+        .tile-wide .icon-circle {
+            width: 50px;
+            height: 50px;
+            background: #333;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+        }
+
+        .tile-wide .text-content {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .tile-wide .text-content h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .tile-wide .text-content p {
+            margin: 5px 0 0 0;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        /* Borders */
+        .border-blue { border-color: var(--blue-border); }
+        .border-yellow { border-color: var(--yellow-border); }
+
+        /* Specific Tile Styles */
+        .music-tile {
+            width: 180px;
+            height: 180px;
+        }
+
+        /* Iframe Overlay for Music */
+        .iframe-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 10;
+            background: #fff;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .music-tile.active .iframe-container {
+            display: block;
+        }
+
+        .music-tile.active .tile-content {
+            display: none;
+        }
+
+        #rom-upload {
+            display: none;
+        }
+
+        /* Emulator Container */
+        #emulator-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .close-emulator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10000;
+            background: red;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <button class="btn-edit">Friends</button>
+        <button class="btn-edit">Edit Mode</button>
+        <div style="color: #aaa; font-size: 14px;">9:20 a.m. | 20% | Wi-Fi</div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid-container">
+        
+        <div class="tile tile-wide" style="background: linear-gradient(135deg, #222, #111);">
+            <div class="icon-circle">↺</div>
+            <div class="text-content">
+                <h3>Jump Back In!</h3>
+                <p>No recent game</p>
+            </div>
+        </div>
+
+        <div class="tile tile-wide border-blue" onclick="document.getElementById('rom-upload').click()">
+            <div class="icon-circle">🎮</div>
+            <div class="text-content">
+                <h3>Discover</h3>
+                <p>Add games</p>
+            </div>
+        </div>
+
+        <input type="file" id="rom-upload" accept=".nes,.smc,.sfc,.n64,.z64,.gba,.gbc,.gb,.nds" onchange="loadRom(event)">
+
+        <div class="tile">🔴</div>
+        <div class="tile">📷</div>
+        <div class="tile">🎵</div>
+        <div class="tile">🎮</div>
+        <div class="tile">👾</div>
+        <div class="tile">🛒</div>
+        <div class="tile">📺</div>
+        <div class="tile border-yellow">📺</div>
+        <div class="tile" style="background: #fff;">☁️</div>
+        <div class="tile">🌐</div>
+
+        <!-- Music Player Tile -->
+        <div class="tile music-tile border-blue" id="music-tile" onclick="activateMusic()">
+            <div class="tile-content" style="display: flex; flex-direction: column; align-items: center;">
+                <span style="font-size: 40px; margin-bottom: 10px;">🎵</span>
+                <span style="font-size: 12px; background: #333; padding: 2px 8px; border-radius: 10px;">Music Player</span>
+            </div>
+            <div class="iframe-container" id="music-iframe-container"></div>
+        </div>
+
+        <div class="tile">🏆</div>
+        <div class="tile">💬</div>
+        <div class="tile">⚙️</div>
+        <div class="tile" style="background: #fff;">🗂️</div>
+
+    </div>
+
+    <!-- EmulatorJS Container -->
+    <div id="emulator-wrapper">
+        <button class="close-emulator" onclick="closeEmulator()">Close Game</button>
+        <div id="game"></div>
+    </div>
+
+    <script>
+        // Note: I remember that music handles via iframe toggle need lazy loading to avoid lag.
+        let musicLoaded = false;
+
+        function activateMusic() {
+            const tile = document.getElementById('music-tile');
+            const container = document.getElementById('music-iframe-container');
+
+            tile.classList.toggle('active');
+
+            if (tile.classList.contains('active') && !musicLoaded) {
+                const iframe = document.createElement('iframe');
+                iframe.src = "https://freefy.app";
+                iframe.allow = "autoplay; encrypted-media";
+                container.appendChild(iframe);
+                musicLoaded = true;
+            }
+        }
+
+        // Let's handle ROM loading manually with basic extension check
+        function loadRom(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const filename_lower = file.name.toLowerCase();
+            let system_type = "nes"; // fallback default
+
+            if (filename_lower.includes('.smc') || filename_lower.includes('.sfc')) {
+                system_type = "snes";
+            } else if (filename_lower.includes('.n64') || filename_lower.includes('.z64')) {
+                system_type = "n64";
+            } else if (filename_lower.includes('.gba')) {
+                system_type = "gba";
+            } else if (filename_lower.includes('.gb') || filename_lower.includes('.gbc')) {
+                system_type = "gb";
+            }
+
+            // Create blob URL for loading
+            const romBlobUrl = URL.createObjectURL(file);
+
+            // Show emulator wrapper div
+            document.getElementById('emulator-wrapper').style.display = 'block';
+
+            // Set up EJS global variables expected by loader.js
+            window.EJS_player = "#game";
+            window.EJS_core = system_type; 
+            window.EJS_gameUrl = romBlobUrl;
+            window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+            window.EJS_startOnLoaded = true;
+            
+            // Checking if emulator instance already exists
+            if (window.EJS_emulator) {
+                try {
+                    window.EJS_emulator.start();
+                } catch(err) {
+                    console.log("Error trying to restart emulator instance: ", err);
+                }
+            } else {
+                // Append script dynamically if not loaded yet
+                const loaderScript = document.createElement('script');
+                loaderScript.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
+                document.body.appendChild(loaderScript);
+            }
+        }
+
+        function closeEmulator() {
+            document.getElementById('emulator-wrapper').style.display = 'none';
+            // Reload page to clear out memory allocations from emulation context
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
