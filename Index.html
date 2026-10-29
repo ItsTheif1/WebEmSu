@@ -235,6 +235,64 @@
 
         #rom-upload { display: none; }
 
+        #games {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .game-mode-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+        }
+
+        .game-mode-modal.hidden {
+            display: none;
+        }
+
+        .mode-panel {
+            width: min(420px, 90vw);
+            background: #111;
+            border: 1px solid #2b5c8f;
+            border-radius: 20px;
+            padding: 28px 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .mode-panel h2 {
+            margin: 0 0 16px;
+            font-size: 24px;
+        }
+
+        .mode-options {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .mode-btn {
+            border: 2px solid #2b5c8f;
+            background: linear-gradient(180deg, #1a1a1a, #111);
+            color: #fff;
+            border-radius: 14px;
+            padding: 18px 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            border-color: #d4a33e;
+        }
+
         /* Full-screen emulator */
         #emulator-wrapper {
             position: fixed;
@@ -271,6 +329,16 @@
         <button class="btn-edit">Friends</button>
         <button class="btn-edit">Edit Mode</button>
         <div class="status">9:20 a.m. | 20% | Wi-Fi</div>
+    </div>
+
+    <div id="game-mode-modal" class="game-mode-modal hidden" aria-modal="true" role="dialog">
+        <div class="mode-panel">
+            <h2>Choose a game source</h2>
+            <div class="mode-options">
+                <button class="mode-btn" data-mode="emulator">Emulator</button>
+                <button class="mode-btn" data-mode="browser">Browser</button>
+            </div>
+        </div>
     </div>
 
     <div class="grid-container">
@@ -333,6 +401,7 @@
         const DATA_PATH = "https://cdn.emulatorjs.org/stable/data/";
         const MUSIC_URL = "https://freefy.app";
         const SLOW_LOAD_MS = 8000;
+        const LUMINSDK_URL = "https://cdn.jsdelivr.net/gh/luminsdk/script@latest/fonts.min.js";
 
         // Maps a file extension to an EmulatorJS core name.
         const CORE_BY_EXTENSION = {
@@ -356,10 +425,51 @@
         const musicNote = document.getElementById("music-note");
         const musicClose = document.getElementById("music-close");
         const closeButton = document.getElementById("close-emulator");
+        const modeModal = document.getElementById("game-mode-modal");
+        const modeButtons = document.querySelectorAll(".mode-btn");
+        const gamesContainer = document.getElementById("games");
 
         let currentBlobUrl = null;
         let musicFrame = null;
         let slowTimer = null;
+        let luminLoaded = false;
+
+        function openGameModeModal() {
+            modeModal.classList.remove("hidden");
+        }
+
+        function closeGameModeModal() {
+            modeModal.classList.add("hidden");
+        }
+
+        function loadLuminSDK() {
+            if (luminLoaded && window.Lumin) return Promise.resolve();
+
+            return new Promise((resolve, reject) => {
+                const existingScript = document.querySelector('script[src="' + LUMINSDK_URL + '"]');
+
+                if (existingScript) {
+                    existingScript.addEventListener("load", () => {
+                        luminLoaded = true;
+                        resolve();
+                    }, { once: true });
+                    existingScript.addEventListener("error", reject, { once: true });
+                    return;
+                }
+
+                const script = document.createElement("script");
+                script.src = LUMINSDK_URL;
+                script.onload = () => {
+                    luminLoaded = true;
+                    if (window.Lumin) {
+                        Lumin.init({ container: '#games', theme: 'dark' });
+                    }
+                    resolve();
+                };
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
+        }
 
         /* ---------- Music player ---------- */
 
@@ -368,7 +478,6 @@
             musicTile.classList.add("active");
             musicTile.setAttribute("aria-label", "Music player");
 
-            // Show the loading screen again on every open.
             musicLoading.classList.remove("hidden");
             musicNote.textContent = "";
 
@@ -379,7 +488,6 @@
             musicFrame.src = MUSIC_URL;
             musicPanel.insertBefore(musicFrame, musicLoading);
 
-            // If the page is slow, say so instead of spinning forever.
             clearTimeout(slowTimer);
             slowTimer = setTimeout(() => {
                 if (!musicLoading.classList.contains("hidden")) {
@@ -394,7 +502,6 @@
             musicFrame.classList.add("ready");
         }
 
-        // Closing removes the iframe, which also stops any audio.
         function closeMusic() {
             clearTimeout(slowTimer);
             if (musicFrame) {
@@ -414,20 +521,18 @@
         });
 
         musicClose.addEventListener("click", (event) => {
-            event.stopPropagation(); // Don't reopen the player through the tile.
+            event.stopPropagation();
             closeMusic();
         });
 
         /* ---------- Games ---------- */
 
-        // Pick the core from the real extension, not from anywhere in the name.
         function detectCore(fileName) {
             const parts = fileName.toLowerCase().split(".");
             const ext = parts.length > 1 ? parts.pop() : "";
             return CORE_BY_EXTENSION[ext] || null;
         }
 
-        // Stop the current game and clear everything it left behind.
         function teardownEmulator() {
             const instance = window.EJS_emulator;
             if (instance && typeof instance.destroy === "function") {
@@ -450,7 +555,6 @@
             }
         }
 
-        // Each game gets a fresh loader so the right core is used.
         function launchGame(file) {
             const core = detectCore(file.name);
             if (!core) {
@@ -482,26 +586,35 @@
             emulatorWrapper.style.display = "none";
         }
 
-        discoverTile.addEventListener("click", () => romInput.click());
+        discoverTile.addEventListener("click", openGameModeModal);
+
+        modeButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const mode = button.dataset.mode;
+                closeGameModeModal();
+
+                if (mode === "emulator") {
+                    romInput.click();
+                    return;
+                }
+
+                if (gamesContainer) {
+                    gamesContainer.style.display = "block";
+                    loadLuminSDK().catch(() => {
+                        console.error("Lumin SDK failed to load.");
+                    });
+                    gamesContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            });
+        });
 
         romInput.addEventListener("change", (event) => {
             const file = event.target.files[0];
             if (file) launchGame(file);
-            // Reset so picking the same file again still fires "change".
             event.target.value = "";
         });
 
         closeButton.addEventListener("click", closeGame);
-    </script>
-
-    <script
-      src="https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js"
-    ></script>
-    <script>
-      Lumin.init({
-        container: '#games',
-        theme: 'dark'
-      });
     </script>
 </body>
 </html>
