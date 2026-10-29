@@ -3,29 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webemsu Frontend - Modified</title>
-    <!-- EmulatorJS Loader script linked up properly -->
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <title>Webemsu Frontend</title>
     <style>
         :root {
-            --bg-color: #000000;
-            --text-color: #ffffff;
+            --bg-color: #000;
+            --text-color: #fff;
             --tile-bg: #1a1a1a;
-            --tile-border: #333;
             --blue-border: #2b5c8f;
             --yellow-border: #d4a33e;
         }
 
+        * { box-sizing: border-box; }
+
         body {
             margin: 0;
             padding: 20px;
-            background-color: var(--bg-color);
+            background: var(--bg-color);
             color: var(--text-color);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow-x: hidden;
         }
 
-        /* Top Bar styling */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -43,37 +41,46 @@
             cursor: pointer;
         }
 
-        /* Grid Layout */
+        .status {
+            color: #aaa;
+            font-size: 14px;
+        }
+
         .grid-container {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
             max-width: 900px;
+            align-items: flex-start;
         }
 
-        /* Base Tile Styling */
+        /* Base tile. Buttons are used so tiles are keyboard-accessible. */
         .tile {
             width: 100px;
             height: 100px;
-            background-color: var(--tile-bg);
+            background: var(--tile-bg);
+            border: 2px solid transparent;
             border-radius: 20px;
+            color: var(--text-color);
+            font-size: 32px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             cursor: pointer;
             position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 2px solid transparent;
             overflow: hidden;
+            padding: 0;
+            transition: transform 0.2s, box-shadow 0.2s, width 0.35s ease, height 0.35s ease;
         }
 
-        .tile:hover {
+        .tile:hover,
+        .tile:focus-visible {
             transform: scale(1.05);
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+            outline: none;
         }
 
-        /* Wide Tiles */
         .tile-wide {
             width: 220px;
             height: 100px;
@@ -104,74 +111,153 @@
             margin: 0;
             font-size: 16px;
         }
-        
+
         .tile-wide .text-content p {
-            margin: 5px 0 0 0;
+            margin: 5px 0 0;
             font-size: 12px;
             color: #aaa;
         }
 
-        /* Borders */
         .border-blue { border-color: var(--blue-border); }
         .border-yellow { border-color: var(--yellow-border); }
 
-        /* Specific Tile Styles */
+        .tile-label {
+            font-size: 12px;
+            background: #333;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        /* Music tile: small when idle, grows to show the player. */
         .music-tile {
             width: 180px;
             height: 180px;
+            cursor: pointer;
         }
 
-        /* Iframe Overlay for Music */
-        .iframe-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        .music-tile.active {
+            width: 420px;
+            height: 320px;
+            cursor: default;
+            transform: none;
+        }
+
+        .music-tile.active .tile-idle {
             display: none;
-            z-index: 10;
-            background: #fff;
         }
 
-        .iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
+        .music-panel {
+            position: absolute;
+            inset: 0;
+            display: none;
+            background: #000;
+            border-radius: 18px;
+            overflow: hidden;
         }
 
-        .music-tile.active .iframe-container {
+        .music-tile.active .music-panel {
             display: block;
         }
 
-        .music-tile.active .tile-content {
-            display: none;
+        .music-panel iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            opacity: 0;
+            transition: opacity 0.4s ease;
         }
 
-        #rom-upload {
-            display: none;
+        .music-panel iframe.ready {
+            opacity: 1;
         }
 
-        /* Emulator Container */
+        .loading-screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            color: #bbb;
+            font-size: 14px;
+            background: linear-gradient(160deg, #1b1b1b, #000);
+            transition: opacity 0.4s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 34px;
+            height: 34px;
+            border: 3px solid #333;
+            border-top-color: var(--blue-border);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-note {
+            font-size: 12px;
+            color: #888;
+            min-height: 16px;
+        }
+
+        .music-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 2;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 16px;
+            line-height: 28px;
+            text-align: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .music-close:hover {
+            background: rgba(200, 40, 40, 0.9);
+        }
+
+        #rom-upload { display: none; }
+
+        /* Full-screen emulator */
         #emulator-wrapper {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: black;
+            inset: 0;
+            background: #000;
             z-index: 9999;
             display: none;
         }
-        
+
+        #game {
+            width: 100%;
+            height: 100%;
+        }
+
         .close-emulator {
             position: absolute;
             top: 10px;
             right: 10px;
             z-index: 10000;
-            background: red;
-            color: white;
+            background: #c62828;
+            color: #fff;
             border: none;
-            padding: 10px;
+            padding: 10px 14px;
             border-radius: 5px;
             cursor: pointer;
         }
@@ -179,137 +265,231 @@
 </head>
 <body>
 
-    <!-- Top Bar -->
     <div class="top-bar">
         <button class="btn-edit">Friends</button>
         <button class="btn-edit">Edit Mode</button>
-        <div style="color: #aaa; font-size: 14px;">9:20 a.m. | 20% | Wi-Fi</div>
+        <div class="status">9:20 a.m. | 20% | Wi-Fi</div>
     </div>
 
-    <!-- Main Grid -->
     <div class="grid-container">
-        
-        <div class="tile tile-wide" style="background: linear-gradient(135deg, #222, #111);">
+
+        <button class="tile tile-wide" style="background: linear-gradient(135deg, #222, #111);">
             <div class="icon-circle">↺</div>
             <div class="text-content">
                 <h3>Jump Back In!</h3>
                 <p>No recent game</p>
             </div>
-        </div>
+        </button>
 
-        <div class="tile tile-wide border-blue" onclick="document.getElementById('rom-upload').click()">
+        <button class="tile tile-wide border-blue" id="discover-tile">
             <div class="icon-circle">🎮</div>
             <div class="text-content">
                 <h3>Discover</h3>
                 <p>Add games</p>
             </div>
-        </div>
+        </button>
 
-        <input type="file" id="rom-upload" accept=".nes,.smc,.sfc,.n64,.z64,.gba,.gbc,.gb,.nds" onchange="loadRom(event)">
+        <input type="file" id="rom-upload"
+               accept=".nes,.smc,.sfc,.n64,.z64,.gba,.gbc,.gb,.nds">
 
-        <div class="tile">🔴</div>
-        <div class="tile">📷</div>
-        <div class="tile">🎵</div>
-        <div class="tile">🎮</div>
-        <div class="tile">👾</div>
-        <div class="tile">🛒</div>
-        <div class="tile">📺</div>
-        <div class="tile border-yellow">📺</div>
-        <div class="tile" style="background: #fff;">☁️</div>
-        <div class="tile">🌐</div>
+        <button class="tile">🔴</button>
+        <button class="tile">📷</button>
 
-        <!-- Music Player Tile -->
-        <div class="tile music-tile border-blue" id="music-tile" onclick="activateMusic()">
-            <div class="tile-content" style="display: flex; flex-direction: column; align-items: center;">
-                <span style="font-size: 40px; margin-bottom: 10px;">🎵</span>
-                <span style="font-size: 12px; background: #333; padding: 2px 8px; border-radius: 10px;">Music Player</span>
+        <!-- Music tile: a div so the player can sit inside it cleanly. -->
+        <div class="tile music-tile border-blue" id="music-tile"
+             role="button" tabindex="0" aria-label="Open music player">
+            <div class="tile-idle" style="display: flex; flex-direction: column; align-items: center;">
+                <span style="font-size: 40px;">🎵</span>
+                <span class="tile-label">Music Player</span>
             </div>
-            <div class="iframe-container" id="music-iframe-container"></div>
+
+            <div class="music-panel" id="music-panel">
+                <button class="music-close" id="music-close" aria-label="Close music player">✕</button>
+
+                <div class="loading-screen" id="music-loading">
+                    <div class="spinner"></div>
+                    <div>Tuning in…</div>
+                    <div class="loading-note" id="music-note"></div>
+                </div>
+            </div>
         </div>
 
-        <div class="tile">🏆</div>
-        <div class="tile">💬</div>
-        <div class="tile">⚙️</div>
-        <div class="tile" style="background: #fff;">🗂️</div>
+        <button class="tile">🏆</button>
+        <button class="tile">💬</button>
+        <button class="tile">⚙️</button>
+        <button class="tile" style="background: #fff;">🗂️</button>
 
     </div>
 
-    <!-- EmulatorJS Container -->
     <div id="emulator-wrapper">
-        <button class="close-emulator" onclick="closeEmulator()">Close Game</button>
+        <button class="close-emulator" id="close-emulator">Close Game</button>
         <div id="game"></div>
     </div>
 
     <script>
-        // Note: I remember that music handles via iframe toggle need lazy loading to avoid lag.
-        let musicLoaded = false;
+        const LOADER_URL = "https://cdn.emulatorjs.org/stable/data/loader.js";
+        const DATA_PATH = "https://cdn.emulatorjs.org/stable/data/";
+        const MUSIC_URL = "https://freefy.app";
+        const SLOW_LOAD_MS = 8000;
 
-        function activateMusic() {
-            const tile = document.getElementById('music-tile');
-            const container = document.getElementById('music-iframe-container');
+        // Maps a file extension to an EmulatorJS core name.
+        const CORE_BY_EXTENSION = {
+            nes: "nes",
+            smc: "snes",
+            sfc: "snes",
+            n64: "n64",
+            z64: "n64",
+            gba: "gba",
+            gb: "gb",
+            gbc: "gb",
+            nds: "nds"
+        };
 
-            tile.classList.toggle('active');
+        const emulatorWrapper = document.getElementById("emulator-wrapper");
+        const romInput = document.getElementById("rom-upload");
+        const discoverTile = document.getElementById("discover-tile");
+        const musicTile = document.getElementById("music-tile");
+        const musicPanel = document.getElementById("music-panel");
+        const musicLoading = document.getElementById("music-loading");
+        const musicNote = document.getElementById("music-note");
+        const musicClose = document.getElementById("music-close");
+        const closeButton = document.getElementById("close-emulator");
 
-            if (tile.classList.contains('active') && !musicLoaded) {
-                const iframe = document.createElement('iframe');
-                iframe.src = "https://freefy.app";
-                iframe.allow = "autoplay; encrypted-media";
-                container.appendChild(iframe);
-                musicLoaded = true;
-            }
-        }
+        let currentBlobUrl = null;
+        let musicFrame = null;
+        let slowTimer = null;
 
-        // Let's handle ROM loading manually with basic extension check
-        function loadRom(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        /* ---------- Music player ---------- */
 
-            const filename_lower = file.name.toLowerCase();
-            let system_type = "nes"; // fallback default
+        function openMusic() {
+            if (musicTile.classList.contains("active")) return;
+            musicTile.classList.add("active");
+            musicTile.setAttribute("aria-label", "Music player");
 
-            if (filename_lower.includes('.smc') || filename_lower.includes('.sfc')) {
-                system_type = "snes";
-            } else if (filename_lower.includes('.n64') || filename_lower.includes('.z64')) {
-                system_type = "n64";
-            } else if (filename_lower.includes('.gba')) {
-                system_type = "gba";
-            } else if (filename_lower.includes('.gb') || filename_lower.includes('.gbc')) {
-                system_type = "gb";
-            }
+            // Show the loading screen again on every open.
+            musicLoading.classList.remove("hidden");
+            musicNote.textContent = "";
 
-            // Create blob URL for loading
-            const romBlobUrl = URL.createObjectURL(file);
+            musicFrame = document.createElement("iframe");
+            musicFrame.title = "Music player";
+            musicFrame.allow = "autoplay; encrypted-media";
+            musicFrame.addEventListener("load", onMusicLoaded);
+            musicFrame.src = MUSIC_URL;
+            musicPanel.insertBefore(musicFrame, musicLoading);
 
-            // Show emulator wrapper div
-            document.getElementById('emulator-wrapper').style.display = 'block';
-
-            // Set up EJS global variables expected by loader.js
-            window.EJS_player = "#game";
-            window.EJS_core = system_type; 
-            window.EJS_gameUrl = romBlobUrl;
-            window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
-            window.EJS_startOnLoaded = true;
-            
-            // Checking if emulator instance already exists
-            if (window.EJS_emulator) {
-                try {
-                    window.EJS_emulator.start();
-                } catch(err) {
-                    console.log("Error trying to restart emulator instance: ", err);
+            // If the page is slow, say so instead of spinning forever.
+            clearTimeout(slowTimer);
+            slowTimer = setTimeout(() => {
+                if (!musicLoading.classList.contains("hidden")) {
+                    musicNote.textContent = "This is taking a while. Check your connection.";
                 }
-            } else {
-                // Append script dynamically if not loaded yet
-                const loaderScript = document.createElement('script');
-                loaderScript.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
-                document.body.appendChild(loaderScript);
+            }, SLOW_LOAD_MS);
+        }
+
+        function onMusicLoaded() {
+            clearTimeout(slowTimer);
+            musicLoading.classList.add("hidden");
+            musicFrame.classList.add("ready");
+        }
+
+        // Closing removes the iframe, which also stops any audio.
+        function closeMusic() {
+            clearTimeout(slowTimer);
+            if (musicFrame) {
+                musicFrame.remove();
+                musicFrame = null;
+            }
+            musicTile.classList.remove("active");
+            musicTile.setAttribute("aria-label", "Open music player");
+        }
+
+        musicTile.addEventListener("click", openMusic);
+        musicTile.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openMusic();
+            }
+        });
+
+        musicClose.addEventListener("click", (event) => {
+            event.stopPropagation(); // Don't reopen the player through the tile.
+            closeMusic();
+        });
+
+        /* ---------- Games ---------- */
+
+        // Pick the core from the real extension, not from anywhere in the name.
+        function detectCore(fileName) {
+            const parts = fileName.toLowerCase().split(".");
+            const ext = parts.length > 1 ? parts.pop() : "";
+            return CORE_BY_EXTENSION[ext] || null;
+        }
+
+        // Stop the current game and clear everything it left behind.
+        function teardownEmulator() {
+            const instance = window.EJS_emulator;
+            if (instance && typeof instance.destroy === "function") {
+                try {
+                    instance.destroy();
+                } catch (err) {
+                    console.warn("Could not destroy the emulator cleanly:", err);
+                }
+            }
+
+            delete window.EJS_emulator;
+            document.getElementById("game").innerHTML = "";
+
+            const oldLoader = document.getElementById("ejs-loader");
+            if (oldLoader) oldLoader.remove();
+
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+                currentBlobUrl = null;
             }
         }
 
-        function closeEmulator() {
-            document.getElementById('emulator-wrapper').style.display = 'none';
-            // Reload page to clear out memory allocations from emulation context
-            window.location.reload();
+        // Each game gets a fresh loader so the right core is used.
+        function launchGame(file) {
+            const core = detectCore(file.name);
+            if (!core) {
+                alert("That file type isn't supported yet. Try a .nes, .smc, .sfc, .n64, .z64, .gba, .gb, .gbc, or .nds file.");
+                return;
+            }
+
+            teardownEmulator();
+
+            currentBlobUrl = URL.createObjectURL(file);
+
+            window.EJS_player = "#game";
+            window.EJS_core = core;
+            window.EJS_gameUrl = currentBlobUrl;
+            window.EJS_gameName = file.name;
+            window.EJS_pathtodata = DATA_PATH;
+            window.EJS_startOnLoaded = true;
+
+            emulatorWrapper.style.display = "block";
+
+            const loader = document.createElement("script");
+            loader.id = "ejs-loader";
+            loader.src = LOADER_URL;
+            document.body.appendChild(loader);
         }
+
+        function closeGame() {
+            teardownEmulator();
+            emulatorWrapper.style.display = "none";
+        }
+
+        discoverTile.addEventListener("click", () => romInput.click());
+
+        romInput.addEventListener("change", (event) => {
+            const file = event.target.files[0];
+            if (file) launchGame(file);
+            // Reset so picking the same file again still fires "change".
+            event.target.value = "";
+        });
+
+        closeButton.addEventListener("click", closeGame);
     </script>
 </body>
 </html>
