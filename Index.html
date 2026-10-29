@@ -265,6 +265,8 @@
 </head>
 <body>
 
+    <div id="games"></div>
+
     <div class="top-bar">
         <button class="btn-edit">Friends</button>
         <button class="btn-edit">Edit Mode</button>
@@ -490,6 +492,16 @@
         });
 
         closeButton.addEventListener("click", closeGame);
+    </script>
+
+    <script
+      src="https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js"
+    ></script>
+    <script>
+      Lumin.init({
+        container: '#games',
+        theme: 'dark'
+      });
     </script>
 </body>
 </html>
